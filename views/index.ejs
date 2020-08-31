@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta charset="utf-8" />
+    <title>autoML Demo</title>
+    <link rel='stylesheet' href='css/style.css' />
+    <link rel='stylesheet' href='css/bootstrap.css' />
+    <link rel='stylesheet' href='css/bootstrap-theme.css'>
+    <link rel='stylesheet' href='css/highcharts.css'>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-light" style="background-color: #e3f2fd;">
+        <span class="navbar-brand mb-0 h1">AutoML Demo</span>
+    </nav>
+
+
+    <form style="margin: 50px;" action="/start" method="POST" enctype="multipart/form-data" id="formSubmit">
+        <div class="form-group row">
+            <label for="customFile" class="col-sm-2 col-form-label">DATA(CSV File):</label>
+            <div class="custom-file col-sm-7">
+                <input type="file" class="custom-file-input" id="customFile" required>
+                <label class="custom-file-label" for="customFile">Choose file</label>
+            </div>
+        </div>
+        <div class="form-group row">
+            <label class="col-sm-2 col-form-label">Task Selection: </label>
+            <select class="custom-select col-sm-7" id="task">
+                <option value="1" selected>RUL Prediction</option>
+                <option value="2">Anomaly Detection</option>
+            </select>
+        </div>
+        <div class="form-group row">
+            <label class="col-sm-2 col-form-label">Algorithms: </label>
+            <select class="custom-select col-sm-7" id="algorithms">
+                <option value="1" selected>Quick Algorithms</option>
+                <option value="2">All Algorithms</option>
+            </select>
+        </div>
+        <div class="form-group row">
+            <label class="col-sm-2 col-form-label">Model: </label>
+            <select class="custom-select col-sm-7" id="model">
+                <option value="1" selected>Black Box Model</option>
+                <option value="2">Explainable Model</option>
+            </select>
+        </div>
+        <div class="form-group row">
+            <label class="col-sm-2 col-form-label">Criterion: </label>
+            <select class="custom-select col-sm-7" id="criterion">
+                <option value="1" selected>Root Mean Square Error</option>
+                <option value="2">Accuracy</option>
+                <option value="3">F1-score</option>
+            </select>
+        </div>
+        <div class="form-group row">
+            <label class="col-sm-2 col-form-label">Total Time Limit:</label>
+            <div class="col-sm-6">
+                <input class="form-control" type="number" min="1" id="totalTime" required>
+            </div>
+            <label class="col-sm-2 col-form-label">mins</label>
+        </div>
+        <br><br>
+        <div class="form-group row" style="text-align: center;">
+            <div class="col-sm-2">
+                <button type="submit" class="btn btn-primary btn-lg" id="btnStart">
+                    <span class="glyphicon glyphicon-play"> </span> Start
+                </button>
+            </div>
+            <div class="col-sm-2">
+                <button type="button" class="btn btn-primary btn-lg" id="btnStop">
+                    <span class="glyphicon glyphicon-stop"> </span> Stop
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <hr>
+    <h4 style="margin-left: 50px;">Training Progress:</h4>
+    <br>
+    <div class="progress" style="height: 20px; margin-left: 80px;margin-right: 80px;">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0"
+            aria-valuemin="0" aria-valuemax="100" style="width: 0%" id="progressBar"></div>
+    </div>
+    <br><br>
+    <figure class="highcharts-figure" style="margin: 50px;">
+        <div id="container"></div>
+    </figure>
+    <div id="finishMessage">
+
+    </div>
+    <div style="text-align: center;">
+        <button type="button" class="btn btn-light btn-lg"><a href="/download"> <span
+                    class="glyphicon glyphicon-cloud-download"> </span> Download Model</a></button>
+    </div>
+    <br><br><br>
+
+
+    <!-- <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-12">
+                    &copy; 2020 Test Project | By : ly</a>
+                </div>
+
+            </div>
+        </div>
+    </footer> -->
+
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.js"></script>
+    <script src="js/bs-custom-file-input.min.js"></script>
+    <script src="js/highcharts.js"></script>
+    <script type="text/javascript">
+        var totalTime
+        bsCustomFileInput.init()
+        $('#formSubmit').submit(function (e) {
+            e.preventDefault();
+            var formData = new FormData();
+            var myfile = $("#customFile")[0].files[0];
+            formData.append("uploadfile", myfile);
+            formData.append("task", $("#task").val());
+            formData.append("algorithms", $("#algorithms").val());
+            formData.append("model", $("#model").val());
+            formData.append("criterion", $("#criterion").val());
+            formData.append("totalTime", $("#totalTime").val());
+            $.ajax({
+                url: '/start',
+                type: 'post',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (message) {
+                    console.log(message)
+                    $('#progressBar').css("width", "0%")
+                    $('#progressBar').addClass("progress-bar-animated")
+                    totalTime = $("#totalTime").val()
+                    totalTime = totalTime * 60
+
+                }
+            });
+        });
+
+        $('#btnStop').click(function () {
+            $.ajax({
+                url: '/stop',
+                type: 'post',
+                success: function (message) {
+                    console.log(message)
+                    $('#progressBar').removeClass("progress-bar-animated")
+                }
+            });
+        })
+
+    </script>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript">
+        var socket = io();
+
+        Highcharts.chart('container', {
+            chart: {
+                type: 'areaspline',
+                animation: Highcharts.svg, // don't animate in old IE
+                marginRight: 10,
+                events: {
+                    load: function () {
+                        // set up the updating of the chart each second
+                        var series = this.series[0];
+
+                        socket.on('testmsg', function (msg) {
+                            console.log(msg)
+                            var processPerformance = msg.split(" ")[0]
+                            var processStatus = msg.split(" ")[1]
+                            var processTime = msg.split(" ")[2]
+
+                            var counter = parseInt(processTime) / totalTime * 100
+                            var progressCSS = parseInt(counter) + "%"
+
+                            $('#progressBar').css("width", progressCSS)
+
+                            time = (new Date()).getTime()
+                            if (series.data.length < 20) {
+                                series.addPoint([time, parseFloat(processPerformance)], true, false);
+                            } else {
+                                series.addPoint([time, parseFloat(processPerformance)], true, true);
+                            }
+
+                            if (processStatus == "1") {
+                                $('#progressBar').removeClass("progress-bar-animated")
+                                // alert("training complete")
+                            }
+                        });
+                    }
+                }
+            },
+
+            time: {
+                useUTC: false
+            },
+
+            title: {
+                text: 'Performance Charts'
+            },
+
+            accessibility: {
+                announceNewData: {
+                    enabled: true,
+                    minAnnounceInterval: 15000,
+                    announcementFormatter: function (allSeries, newSeries, newPoint) {
+                        if (newPoint) {
+                            return 'New point added. Value: ' + newPoint.y;
+                        }
+                        return false;
+                    }
+                }
+            },
+
+            xAxis: {
+                type: 'datetime',
+                tickPixelInterval: 200
+            },
+
+            yAxis: {
+                title: {
+                    text: 'Performance'
+                },
+                plotLines: [{
+                    value: 0,
+                    width: 1,
+                    color: '#808080'
+                }]
+            },
+
+            tooltip: {
+                headerFormat: '<b>{series.name}</b><br/>',
+                pointFormat: '{point.x:%Y-%m-%d %H:%M:%S}<br/>{point.y:.5f}'
+            },
+
+            legend: {
+                enabled: false
+            },
+
+            exporting: {
+                enabled: false
+            },
+
+            series: [{
+                name: 'Performance',
+                data: []
+            }]
+        });
+    </script>
+
+</body>
+
+</html>
