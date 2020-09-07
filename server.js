@@ -2,7 +2,7 @@ var express = require("express");
 var cors = require('cors')
 // var bodyParser = require('body-parser')
 // var fs = require('fs');
-var mainCtrl = require("./controllers/mainctrl.js");
+
 
 var app = express();
 var http = require('http').createServer(app);
